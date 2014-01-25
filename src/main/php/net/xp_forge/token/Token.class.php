@@ -34,4 +34,18 @@ class Token extends \lang\Object {
   public function is($type) {
     return $type == $this->type();
   }
+
+  public function toString() {
+    $s= $this->getClassName().' {'.token_name($this->type()).' ['.$this->type().'], line '.$this->line().' - '.\xp::stringOf($this->literal())."}\n";
+    return $s;
+  }
+
+  public function equals($cmp) {
+    return 
+      $cmp instanceof self &&
+      $this->type() == $cmp->type() &&
+      $this->literal() == $cmp->literal() && 
+      $this->line() == $cmp->line()
+    ;
+  }
 }

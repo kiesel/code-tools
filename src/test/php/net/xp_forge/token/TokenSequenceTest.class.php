@@ -15,6 +15,12 @@ class TokenSequenceTest extends \unittest\TestCase {
     $seq= TokenSequence::fromString('<?php namespace foo; ?>');
     $seq->at(45);
   }
+
+  #[@test]
+  public function length() {
+    $seq= TokenSequence::fromString('<?php namespace foo; ?>');
+    $this->assertEquals(7, $seq->length());
+  }
   
   #[@test]
   public function containsTokens() {

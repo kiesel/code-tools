@@ -27,4 +27,12 @@ class TokenSequence extends \lang\Object {
     }
     return $this->tokens[$pos];
   }
+
+  public function length() {
+    return sizeof($this->tokens);
+  }
+
+  public function iterator() {
+    return new TokenSequenceIterator($this);
+  }
 }
