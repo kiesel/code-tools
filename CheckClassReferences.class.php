@@ -29,21 +29,14 @@ class CheckClassReferences extends \util\cmd\Command {
     return $iterator;
   }
 
-  private function scanNamespace() {
+  private function readNamespaceAndImports() {
     $scanner= new TokenScanner($this->filteredIterator());
     $self= $this;
+
     $scanner->when(T_NAMESPACE, function($token, $iterator) use ($self) {
         $this->namespace= $iterator->next()->literal();
       })
-      ->quitOn([T_CLASS, T_INTERFACE, T_USE])
-      ->run()
-    ;
-  }
-
-  private function scanDeclares() {
-    $scanner= new TokenScanner($this->filteredIterator());
-    $self= $this;
-    $scanner->when(T_USE, function($token, $iterator) use ($self) {
+      ->when(T_USE, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
 
         if ($iterator->next()->is(T_AS)) {
@@ -76,37 +69,22 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->declares[$alias]= $class;
   }
 
-  private function scanInstantiations() {
+  private function verifyReferences() {
     $scanner= new TokenScanner($this->filteredIterator());
     $self= $this;
+
     $scanner->when(T_NEW, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
         $self->checkClassReference($class);
       })
-      ->run()
-    ;
-  }
-
-  private function scanStaticCalls() {
-    $class= '';
-    $iterator= $this->sequence->iterator();
-
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
-
-      if ($token->is(T_DOUBLE_COLON)) {
-      }
-    }
-  }
-
-  private function scanCatches() {
-    $scanner= new TokenScanner($this->filteredIterator());
-    $self= $this;
-    $scanner->when(T_CATCH, function($token, $iterator) use ($self) {
+      ->when(T_CATCH, function($token, $iterator) use ($self) {
         $iterator->next(); // Eat '('
 
         $class= $iterator->next()->literal();
         $self->checkClassReference($class);
+      })
+      ->when(T_DOUBLE_COLON, function($token, $iterator) use ($self) {
+        // TODO
       })
       ->run()
     ;
@@ -153,15 +131,12 @@ class CheckClassReferences extends \util\cmd\Command {
     );
     $this->sequence= $aggregator->emit();
 
-    $this->scanNamespace();
-    $this->scanDeclares();
+    $this->readNamespaceAndImports();
 
     $this->out->writeLine('---> Detected namespace: ', xp::stringOf($this->namespace));
     $this->out->writeLine('---> Detected imports: ', xp::stringOf($this->declares));
 
-    $this->scanInstantiations();
-    $this->scanStaticCalls();
-    $this->scanCatches();
+    $this->verifyReferences();
 
     $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
   }
