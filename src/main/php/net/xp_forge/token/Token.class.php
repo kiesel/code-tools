@@ -32,7 +32,19 @@ class Token extends \lang\Object {
   }
 
   public function is($type) {
+    if (is_string($type)) {
+      return $this->is(T_STRING) && $type === $this->literal();
+    }
+
     return $type == $this->type();
+  }
+
+  public function isStatementSeparator() {
+    return
+      $this->is(T_WHITESPACE) ||
+      $this->is(T_DOUBLE_COLON) ||
+      ($this->is(T_STRING) && (in_array($this->literal(), [',', '(', ')', ';'])))
+    ;
   }
 
   public function toString() {
@@ -44,8 +56,7 @@ class Token extends \lang\Object {
     return 
       $cmp instanceof self &&
       $this->type() == $cmp->type() &&
-      $this->literal() == $cmp->literal() && 
-      $this->line() == $cmp->line()
+      $this->literal() == $cmp->literal()
     ;
   }
 }

@@ -115,10 +115,23 @@ class CheckClassReferences extends \util\cmd\Command {
     }
   }
 
+  private function scanStaticCalls() {
+    $class= '';
+    $iterator= $this->sequence->iterator();
+
+    while ($iterator->hasNext()) {
+      $token= $iterator->next();
+
+      if ($token->is(T_DOUBLE_COLON)) {
+
+      }
+    }
+  }
+
   private function checkClassReference($className) {
 
     // Check if some alias matches
-    if (isset($this->declares[$xpClassName])) {
+    if (isset($this->declares[$className])) {
 
       // Given there's an alias registered, we may assume the class
       // exists and is loadable
@@ -159,6 +172,7 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->out->writeLine('---> Detected imports: ', xp::stringOf($this->declares));
 
     $this->scanInstantiations();
+    $this->scanStaticCalls();
 
     $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
 

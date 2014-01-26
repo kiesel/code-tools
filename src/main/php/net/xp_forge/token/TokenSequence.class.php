@@ -35,4 +35,15 @@ class TokenSequence extends \lang\Object {
   public function iterator() {
     return new TokenSequenceIterator($this);
   }
+
+  public function equals($cmp) {
+    if (!$cmp instanceof self) return false;
+    if (!$cmp->length() == $this->length()) return false;
+
+    for ($i= 0; $i < $this->length(); $i++) {
+      if (!$this->at($i)->equals($cmp->at($i))) return false;
+    }
+
+    return true;
+  }
 }
