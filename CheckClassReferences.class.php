@@ -4,6 +4,7 @@ use net\xp_forge\token\Token;
 use net\xp_forge\token\TokenSequence;
 use net\xp_forge\token\TokenSequenceIterator;
 use net\xp_forge\token\SequenceAggregator;
+use net\xp_forge\token\FilteredIterator;
 
 class CheckClassReferences extends \util\cmd\Command {
   private $file = null;
@@ -20,65 +21,42 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->file= $f;
   }
 
-  private function readIdentifier(TokenSequenceIterator $iterator) {
-    $identifier= '';
-
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
-      if ($token->is([T_WHITESPACE, '(', ';'])) {
-        return $identifier;
-      }
-
-      $identifier.= $token->literal(); 
-    }
-
-    throw new \lang\IllegalStateException('Unable to read identifier.');
-  }
-
   private function scanNamespace() {
-    $iterator= $this->sequence->iterator();
+    $iterator= new FilteredIterator($this->sequence->iterator());
+    $iterator->addDefaultFilters();
+
     while ($iterator->hasNext()) {
       $token= $iterator->next();
 
       if ($token->is(T_NAMESPACE)) {
-        $iterator->next();
-        $this->namespace= $this->readIdentifier($iterator);
+        $token= $iterator->next();
+        $this->namespace= $token->literal();
         return;
       }
     }
   }
 
   private function scanDeclares() {
-    $class= null;
-    $as= null;
+    $iterator= new FilteredIterator($this->sequence->iterator());
+    $iterator->addDefaultFilters();
 
-    $iterator= $this->sequence->iterator();
     while ($iterator->hasNext()) {
       $token= $iterator->next();
 
       if ($token->is(T_USE)) {
-        if (null != $class) {
-          $this->registerImport($class);
-        }
-        $iterator->next();
+        $class= $iterator->next()->literal();
 
-        $class= $this->readIdentifier($iterator);
-      }
-
-      if ($token->is(T_AS)) {
-        $iterator->next();
-
-        $alias= $this->readIdentifier($iterator);
-
-        $this->registerImport($class, $alias);
-        $class= $alias= null;
-      }
-
-      if ($token->is(T_CLASS) || $token->is(T_INTERFACE)) {
-        if (null != $class) {
+        if ($iterator->next()->is(T_AS)) {
+          $alias= $iterator->next()->literal();
+          $this->registerImport($class, $alias);
+        } else {
           $this->registerImport($class);
         }
 
+        continue;
+      }
+
+      if ($token->is([T_CLASS, T_INTERFACE])) {
         return;
       }
     }
@@ -98,7 +76,8 @@ class CheckClassReferences extends \util\cmd\Command {
   }
 
   private function scanInstantiations() {
-    $iterator= $this->sequence->iterator();
+    $iterator= new FilteredIterator($this->sequence->iterator());
+    $iterator->addDefaultFilters();
 
     while ($iterator->hasNext()) {
       $token= $iterator->next();
@@ -106,9 +85,7 @@ class CheckClassReferences extends \util\cmd\Command {
       if ($token->is(T_NEW)) {
         $line= $token->line();
 
-        $iterator->next(); // Eat whitespace
-
-        $class= $this->readIdentifier($iterator);
+        $class= $iterator->next()->literal();
         $this->checkClassReference($class);
       }
     }
@@ -122,7 +99,22 @@ class CheckClassReferences extends \util\cmd\Command {
       $token= $iterator->next();
 
       if ($token->is(T_DOUBLE_COLON)) {
+      }
+    }
+  }
 
+  private function scanCatches() {
+    $iterator= new FilteredIterator($this->sequence->iterator());
+    $iterator->addDefaultFilters();
+
+    while ($iterator->hasNext()) {
+      $token= $iterator->next();
+
+      if ($token->is(T_CATCH)) {
+        $iterator->next(); // Eat '('
+
+        $class= $iterator->next()->literal();
+        $this->checkClassReference($class);
       }
     }
   }
@@ -143,6 +135,7 @@ class CheckClassReferences extends \util\cmd\Command {
   }
 
   private function checkClassExists($className) {
+    $this->out->writeLine('---> Checking class ', $className);
     
     // Convert given name to XP name
     $fqcn= strtr(ltrim($className, '\\'), '\\', '.');
@@ -175,6 +168,7 @@ class CheckClassReferences extends \util\cmd\Command {
 
     $this->scanInstantiations();
     $this->scanStaticCalls();
+    $this->scanCatches();
 
     $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
 
