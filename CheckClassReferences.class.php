@@ -5,6 +5,7 @@ use net\xp_forge\token\TokenSequence;
 use net\xp_forge\token\TokenSequenceIterator;
 use net\xp_forge\token\SequenceAggregator;
 use net\xp_forge\token\FilteredIterator;
+use net\xp_forge\token\TokenScanner;
 
 class CheckClassReferences extends \util\cmd\Command {
   private $file = null;
@@ -21,29 +22,28 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->file= $f;
   }
 
-  private function scanNamespace() {
+  private function filteredIterator() {
     $iterator= new FilteredIterator($this->sequence->iterator());
     $iterator->addDefaultFilters();
 
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
+    return $iterator;
+  }
 
-      if ($token->is(T_NAMESPACE)) {
-        $token= $iterator->next();
-        $this->namespace= $token->literal();
-        return;
-      }
-    }
+  private function scanNamespace() {
+    $scanner= new TokenScanner($this->filteredIterator());
+    $self= $this;
+    $scanner->when(T_NAMESPACE, function($token, $iterator) use ($self) {
+        $this->namespace= $iterator->next()->literal();
+      })
+      ->quitOn([T_CLASS, T_INTERFACE, T_USE])
+      ->run()
+    ;
   }
 
   private function scanDeclares() {
-    $iterator= new FilteredIterator($this->sequence->iterator());
-    $iterator->addDefaultFilters();
-
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
-
-      if ($token->is(T_USE)) {
+    $scanner= new TokenScanner($this->filteredIterator());
+    $self= $this;
+    $scanner->when(T_USE, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
 
         if ($iterator->next()->is(T_AS)) {
@@ -52,14 +52,15 @@ class CheckClassReferences extends \util\cmd\Command {
         } else {
           $this->registerImport($class);
         }
+      })
+      ->quitOn([T_CLASS, T_INTERFACE])
+      ->run()
+    ;
+  }
 
-        continue;
-      }
-
-      if ($token->is([T_CLASS, T_INTERFACE])) {
-        return;
-      }
-    }
+  private function out() {
+    $args= func_get_args();
+    call_user_func_array([$this->out, 'writeLine'], $args);
   }
 
   private function registerImport($class, $alias= null) {
@@ -76,19 +77,14 @@ class CheckClassReferences extends \util\cmd\Command {
   }
 
   private function scanInstantiations() {
-    $iterator= new FilteredIterator($this->sequence->iterator());
-    $iterator->addDefaultFilters();
-
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
-
-      if ($token->is(T_NEW)) {
-        $line= $token->line();
-
+    $scanner= new TokenScanner($this->filteredIterator());
+    $self= $this;
+    $scanner->when(T_NEW, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
-        $this->checkClassReference($class);
-      }
-    }
+        $self->checkClassReference($class);
+      })
+      ->run()
+    ;
   }
 
   private function scanStaticCalls() {
@@ -104,19 +100,16 @@ class CheckClassReferences extends \util\cmd\Command {
   }
 
   private function scanCatches() {
-    $iterator= new FilteredIterator($this->sequence->iterator());
-    $iterator->addDefaultFilters();
-
-    while ($iterator->hasNext()) {
-      $token= $iterator->next();
-
-      if ($token->is(T_CATCH)) {
+    $scanner= new TokenScanner($this->filteredIterator());
+    $self= $this;
+    $scanner->when(T_CATCH, function($token, $iterator) use ($self) {
         $iterator->next(); // Eat '('
 
         $class= $iterator->next()->literal();
-        $this->checkClassReference($class);
-      }
-    }
+        $self->checkClassReference($class);
+      })
+      ->run()
+    ;
   }
 
   private function checkClassReference($className) {
@@ -171,7 +164,5 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->scanCatches();
 
     $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
-
-    // var_dump(xp::stringOf($this->sequence));
   }
 }
