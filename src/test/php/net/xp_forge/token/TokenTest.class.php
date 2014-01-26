@@ -23,6 +23,16 @@ class TokenTest extends \unittest\TestCase {
   }
 
   #[@test]
+  public function is_with_array_checks_each_element() {
+    $this->assertTrue(create(new Token([T_NAMESPACE, "", 0]))->is([T_STRING, T_NAMESPACE]));
+  }
+
+  #[@test]
+  public function is_with_array_returns_false_if_no_type_matches() {
+    $this->assertFalse(create(new Token([T_NAMESPACE, "", 0]))->is([T_STRING, T_NS_SEPARATOR]));
+  }
+
+  #[@test]
   public function is_with_differing_type_returns_false() {
     $this->assertFalse(create(new Token([T_STRING, "", 0]))->is(T_NAMESPACE));
   }

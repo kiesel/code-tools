@@ -3,6 +3,7 @@
 use net\xp_forge\token\Token;
 use net\xp_forge\token\TokenSequence;
 use net\xp_forge\token\TokenSequenceIterator;
+use net\xp_forge\token\SequenceAggregator;
 
 class CheckClassReferences extends \util\cmd\Command {
   private $file = null;
@@ -24,11 +25,7 @@ class CheckClassReferences extends \util\cmd\Command {
 
     while ($iterator->hasNext()) {
       $token= $iterator->next();
-      if (
-        $token->is(T_WHITESPACE) || 
-        ($token->is(T_STRING) && '(' == $token->literal()) ||
-        ($token->is(T_STRING) && ';' == $token->literal())
-      ) {
+      if ($token->is([T_WHITESPACE, '(', ';'])) {
         return $identifier;
       }
 
@@ -95,6 +92,8 @@ class CheckClassReferences extends \util\cmd\Command {
     if (isset($this->declares[$alias])) {
       throw new \lang\IllegalStateException('Alias "'.$alias.'" already taken.');
     }
+
+    $this->checkClassExists($class);
     $this->declares[$alias]= $class;
   }
 
@@ -163,7 +162,10 @@ class CheckClassReferences extends \util\cmd\Command {
    * 
    */
   public function run() {
-    $this->sequence= TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($this->file)));
+    $aggregator= new SequenceAggregator(
+      TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($this->file)))
+    );
+    $this->sequence= $aggregator->emit();
 
     $this->scanNamespace();
     $this->scanDeclares();
@@ -176,6 +178,6 @@ class CheckClassReferences extends \util\cmd\Command {
 
     $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
 
-    var_dump(xp::stringOf($this->sequence));
+    // var_dump(xp::stringOf($this->sequence));
   }
 }

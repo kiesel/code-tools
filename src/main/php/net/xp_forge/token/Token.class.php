@@ -32,6 +32,14 @@ class Token extends \lang\Object {
   }
 
   public function is($type) {
+    if (is_array($type)) {
+      foreach ($type as $t) {
+        if ($this->is($t)) return true;
+      }
+
+      return false;
+    }
+
     if (is_string($type)) {
       return $this->is(T_STRING) && $type === $this->literal();
     }

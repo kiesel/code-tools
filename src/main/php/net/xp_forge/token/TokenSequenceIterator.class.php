@@ -13,6 +13,10 @@ class TokenSequenceIterator extends \lang\Object implements \util\XPIterator {
   }
 
   public function next() {
+    if ($this->sequence->length() <= $this->pos) {
+      return null;
+    }
+
     return $this->sequence->at($this->pos++);
   }
 }

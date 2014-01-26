@@ -24,6 +24,16 @@ class TokenSequenceIteratorTest extends \unittest\TestCase {
   }
 
   #[@test]
+  public function iterate_on_empty_sequence() {
+    $iterator= TokenSequence::fromString('')->iterator();
+
+    $this->assertEquals(
+      null,
+      $iterator->next()
+    );
+  }
+
+  #[@test]
   public function iterate_proceeds() {
     $iterator= TokenSequence::fromString('<?php namespace')->iterator();
 
