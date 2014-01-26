@@ -72,8 +72,10 @@ class CheckClassReferences extends \util\cmd\Command {
   private function verifyReferences() {
     $scanner= new TokenScanner($this->filteredIterator());
     $self= $this;
+    $last= null;
 
-    $scanner->when(T_NEW, function($token, $iterator) use ($self) {
+    $scanner
+      ->when(T_NEW, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
         $self->checkClassReference($class);
       })
@@ -83,8 +85,13 @@ class CheckClassReferences extends \util\cmd\Command {
         $class= $iterator->next()->literal();
         $self->checkClassReference($class);
       })
-      ->when(T_DOUBLE_COLON, function($token, $iterator) use ($self) {
-        // TODO
+      ->when(T_DOUBLE_COLON, function($token, $iterator) use ($self, &$last) {
+        $self->checkClassReference($last);
+      })
+      ->when(T_STRING, function($token, $iterator) use ($self, &$last) {
+
+        // Remember for later use
+        $last= $token->literal();
       })
       ->run()
     ;
@@ -106,10 +113,12 @@ class CheckClassReferences extends \util\cmd\Command {
   }
 
   private function checkClassExists($className) {
-    $this->out->writeLine('---> Checking class ', $className);
-    
+    $this->out('---> Checking class ', $className);
+
     // Convert given name to XP name
     $fqcn= strtr(ltrim($className, '\\'), '\\', '.');
+
+    if ('xp' == $fqcn) return true;
 
     $cl= \lang\ClassLoader::getDefault();
     if (!$cl->providesClass($fqcn)) {
