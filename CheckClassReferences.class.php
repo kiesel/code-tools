@@ -34,7 +34,8 @@ class CheckClassReferences extends \util\cmd\Command {
     $self= $this;
 
     $scanner->when(T_NAMESPACE, function($token, $iterator) use ($self) {
-        $this->namespace= $iterator->next()->literal();
+        $self->namespace= $iterator->next()->literal();
+        $self->out('---> Detected namespace: ', xp::stringOf($this->namespace));
       })
       ->when(T_USE, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
@@ -62,10 +63,11 @@ class CheckClassReferences extends \util\cmd\Command {
     }
 
     if (isset($this->declares[$alias])) {
-      throw new \lang\IllegalStateException('Alias "'.$alias.'" already taken.');
+      $this->out('E Double alias: "', xp::stringOf($alias));
+      return;
     }
 
-    $this->checkClassExists($class);
+    $this->checkClassExists($class, true);
     $this->declares[$alias]= $class;
   }
 
@@ -112,8 +114,17 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->checkClassExists($className);
   }
 
-  private function checkClassExists($className) {
-    $this->out('---> Checking class ', $className);
+  private function checkClassExists($className, $inImports= false) {
+
+    // If className contains \ but then does not start with \
+    // it uses relative namespaces which is discouraged by XP
+    if (false !== strpos($className, '\\')) {
+      if ('\\' == $className{0} && $inImports) {
+        $this->out('W Using absolute reference in use is discouraged: ', xp::stringOf($className));
+      } else if ('\\' != $className{0} && !$inImports) {
+        $this->out('W Using relative class references like "'.$className.'" is discouraged.');
+      }
+    }
 
     // Convert given name to XP name
     $fqcn= strtr(ltrim($className, '\\'), '\\', '.');
@@ -122,7 +133,7 @@ class CheckClassReferences extends \util\cmd\Command {
 
     $cl= \lang\ClassLoader::getDefault();
     if (!$cl->providesClass($fqcn)) {
-      $this->addError('Class '.$fqcn.' cannot be loaded.');
+      $this->addError('E Class '.$fqcn.' cannot be loaded.');
     }
   }
 
@@ -136,17 +147,13 @@ class CheckClassReferences extends \util\cmd\Command {
    */
   public function run() {
     $aggregator= new SequenceAggregator(
-      TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($this->file)))
+      TokenSequence::fromString(\io\FileUtil::getContents(new io\File($this->file)))
     );
     $this->sequence= $aggregator->emit();
 
     $this->readNamespaceAndImports();
-
-    $this->out->writeLine('---> Detected namespace: ', xp::stringOf($this->namespace));
-    $this->out->writeLine('---> Detected imports: ', xp::stringOf($this->declares));
-
     $this->verifyReferences();
 
-    $this->out->writeLine('---> Detected errors:', xp::StringOf($this->errors));
+    $this->out('---> Detected errors:', xp::StringOf($this->errors));
   }
 }
