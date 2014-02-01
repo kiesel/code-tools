@@ -126,10 +126,19 @@ class CheckClassReferences extends \util\cmd\Command {
       }
     }
 
+    // Allow xp, either non-namespaced or qualified
+    if (
+      ('xp' == $className && null == $this->namespace) ||
+      ('\\xp' == $className && null !== $this->namespace)
+    ) {
+      return true;
+    }
+
+    // Allow a set of well-known class references
+    if (in_array($className, ['self', 'parent', 'static'])) return true;
+
     // Convert given name to XP name
     $fqcn= strtr(ltrim($className, '\\'), '\\', '.');
-
-    if ('xp' == $fqcn) return true;
 
     $cl= \lang\ClassLoader::getDefault();
     if (!$cl->providesClass($fqcn)) {
