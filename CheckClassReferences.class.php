@@ -155,6 +155,7 @@ class CheckClassReferences extends \util\cmd\Command {
    * 
    */
   public function run() {
+    $this->out('===> Checking ', $this->file);
     $aggregator= new SequenceAggregator(
       TokenSequence::fromString(\io\FileUtil::getContents(new io\File($this->file)))
     );
@@ -163,6 +164,9 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->readNamespaceAndImports();
     $this->verifyReferences();
 
-    $this->out('---> Detected errors:', xp::StringOf($this->errors));
+    $this->out('---> Detected errors:', xp::stringOf($this->errors));
+    if (sizeof($this->errors)) {
+      throw new \lang\SystemExit(1, sizeof($this->errors).' errors detected.');
+    }
   }
 }
