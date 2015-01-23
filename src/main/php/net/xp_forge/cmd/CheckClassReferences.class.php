@@ -1,4 +1,4 @@
-<?php
+<?php namespace net\xp_forge\cmd;
 
 use util\log\Logger;
 use util\log\ConsoleAppender;
@@ -49,7 +49,7 @@ class CheckClassReferences extends \util\cmd\Command {
 
     $scanner->when(T_NAMESPACE, function($token, $iterator) use ($self) {
         $self->namespace= $iterator->next()->literal();
-        $this->cat->info('---> Detected namespace:', xp::stringOf($this->namespace));
+        $this->cat->info('---> Detected namespace:', \xp::stringOf($this->namespace));
       })
       ->when(T_USE, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
@@ -77,7 +77,7 @@ class CheckClassReferences extends \util\cmd\Command {
     }
 
     if (isset($this->declares[$alias])) {
-      $this->cat->error('Double alias:', xp::stringOf($alias));
+      $this->cat->error('Double alias:', \xp::stringOf($alias));
       return;
     }
 
@@ -134,7 +134,7 @@ class CheckClassReferences extends \util\cmd\Command {
     // it uses relative namespaces which is discouraged by XP
     if (false !== strpos($className, '\\')) {
       if ('\\' == $className{0} && $inImports) {
-        $this->cat->warn('Using absolute reference in use is discouraged: ', xp::stringOf($className));
+        $this->cat->warn('Using absolute reference in use is discouraged: ', \xp::stringOf($className));
       } else if ('\\' != $className{0} && !$inImports) {
         $this->cat->warn('Using relative class references like "'.$className.'" is discouraged.');
       }
@@ -171,7 +171,7 @@ class CheckClassReferences extends \util\cmd\Command {
   public function run() {
     $this->out('===> Checking ', $this->file);
     $aggregator= new SequenceAggregator(
-      TokenSequence::fromString(\io\FileUtil::getContents(new io\File($this->file)))
+      TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($this->file)))
     );
     $this->sequence= $aggregator->emit();
 
@@ -179,7 +179,7 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->verifyReferences();
 
     if (sizeof($this->errors)) {
-      $this->out('---> Detected errors:', xp::stringOf($this->errors));
+      $this->out('---> Detected errors:', \xp::stringOf($this->errors));
       throw new \lang\SystemExit(1, sizeof($this->errors).' errors detected.');
     }
   }
