@@ -1,5 +1,7 @@
 <?php
 
+use util\log\Logger;
+use util\log\ConsoleAppender;
 use net\xp_forge\token\Token;
 use net\xp_forge\token\TokenSequence;
 use net\xp_forge\token\TokenSequenceIterator;
@@ -8,6 +10,7 @@ use net\xp_forge\token\FilteredIterator;
 use net\xp_forge\token\TokenScanner;
 
 class CheckClassReferences extends \util\cmd\Command {
+  private $cat = null;
   private $file = null;
 
   private $namespace = null;
@@ -17,9 +20,20 @@ class CheckClassReferences extends \util\cmd\Command {
   private $errors= [];
   private $warnings= [];
 
+  public function __construct() {
+    $this->cat = Logger::getInstance()->getCategory();
+  }
+
   #[@arg(name= 'file')]
   public function setFile($f) {
     $this->file= $f;
+  }
+
+  #[@arg(name= 'verbose')]
+  public function setVerbose($v= false) {
+    if (null === $v) {
+      Logger::getInstance()->getCategory()->withAppender(new ConsoleAppender());
+    }
   }
 
   private function filteredIterator() {
@@ -35,7 +49,7 @@ class CheckClassReferences extends \util\cmd\Command {
 
     $scanner->when(T_NAMESPACE, function($token, $iterator) use ($self) {
         $self->namespace= $iterator->next()->literal();
-        $self->out('---> Detected namespace: ', xp::stringOf($this->namespace));
+        $this->cat->info('---> Detected namespace:', xp::stringOf($this->namespace));
       })
       ->when(T_USE, function($token, $iterator) use ($self) {
         $class= $iterator->next()->literal();
@@ -63,7 +77,7 @@ class CheckClassReferences extends \util\cmd\Command {
     }
 
     if (isset($this->declares[$alias])) {
-      $this->out('E Double alias: "', xp::stringOf($alias));
+      $this->cat->error('Double alias:', xp::stringOf($alias));
       return;
     }
 
@@ -120,9 +134,9 @@ class CheckClassReferences extends \util\cmd\Command {
     // it uses relative namespaces which is discouraged by XP
     if (false !== strpos($className, '\\')) {
       if ('\\' == $className{0} && $inImports) {
-        $this->out('W Using absolute reference in use is discouraged: ', xp::stringOf($className));
+        $this->cat->warn('Using absolute reference in use is discouraged: ', xp::stringOf($className));
       } else if ('\\' != $className{0} && !$inImports) {
-        $this->out('W Using relative class references like "'.$className.'" is discouraged.');
+        $this->cat->warn('Using relative class references like "'.$className.'" is discouraged.');
       }
     }
 
@@ -164,8 +178,8 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->readNamespaceAndImports();
     $this->verifyReferences();
 
-    $this->out('---> Detected errors:', xp::stringOf($this->errors));
     if (sizeof($this->errors)) {
+      $this->out('---> Detected errors:', xp::stringOf($this->errors));
       throw new \lang\SystemExit(1, sizeof($this->errors).' errors detected.');
     }
   }
