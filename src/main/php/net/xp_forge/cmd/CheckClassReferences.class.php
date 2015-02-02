@@ -20,6 +20,13 @@ class CheckClassReferences extends \util\cmd\Command {
   private $errors= [];
   private $warnings= [];
 
+  private static $SPECIAL_CREFS= [
+    'self',
+    'parent',
+    'static',
+    '\\xp'
+  ];
+
   public function __construct() {
     $this->cat = Logger::getInstance()->getCategory();
   }
@@ -140,23 +147,33 @@ class CheckClassReferences extends \util\cmd\Command {
       }
     }
 
+    if (null !== $this->namespace) {
+      if (in_array($className, self::$SPECIAL_CREFS)) {
+        return true;
+      }
+    }
+
     // Allow xp, either non-namespaced or qualified
-    if (
-      ('xp' == $className && null == $this->namespace) ||
-      ('\\xp' == $className && null !== $this->namespace)
-    ) {
+    if ('xp' == $className && null == $this->namespace) {
       return true;
     }
 
-    // Allow a set of well-known class references
-    if (in_array($className, ['self', 'parent', 'static'])) return true;
+    // Convert reference to namespace-local class into fully
+    // qualified identifier
+    $fqClassName= (false === strpos($className, '\\')
+      ? $this->namespace.'\\'
+      : '').$className;
 
     // Convert given name to XP name
-    $fqcn= strtr(ltrim($className, '\\'), '\\', '.');
+    $fqcn= strtr(ltrim($fqClassName, '\\'), '\\', '.');
 
     $cl= \lang\ClassLoader::getDefault();
     if (!$cl->providesClass($fqcn)) {
-      $this->addError('E Class '.$fqcn.' cannot be loaded.');
+      if (class_exists($className)) {
+        $this->cat->warn('Unknown, but available class reference:', $className);
+      } else {
+        $this->addError('E Class '.$fqcn.' cannot be loaded.');
+      }
     }
   }
 
