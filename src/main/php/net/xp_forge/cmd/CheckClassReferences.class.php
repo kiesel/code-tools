@@ -11,11 +11,11 @@ use net\xp_forge\token\TokenScanner;
 
 class CheckClassReferences extends \util\cmd\Command {
   private $cat = null;
-  private $file = null;
 
   private $namespace = null;
   private $declares = [];
   private $sequence= null;
+  private $tokenSequence= null;
 
   private $errors= [];
   private $warnings= [];
@@ -33,7 +33,13 @@ class CheckClassReferences extends \util\cmd\Command {
 
   #[@arg(name= 'file')]
   public function setFile($f) {
-    $this->file= $f;
+    $this->out('===> Checking ', $f);
+    $this->withSequence(TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($f))));
+  }
+
+  public function withSequence(TokenSequence $sequence) {
+    $this->tokenSequence= $sequence;
+    return $this;
   }
 
   #[@arg(name= 'verbose')]
@@ -137,6 +143,9 @@ class CheckClassReferences extends \util\cmd\Command {
 
   private function checkClassExists($className, $inImports= false) {
 
+    // If class is dynamically constructed, there's nothing to check - assume all is good
+    if ('$' == $className[0]) return true;
+
     // If className contains \ but then does not start with \
     // it uses relative namespaces which is discouraged by XP
     if (false !== strpos($className, '\\')) {
@@ -181,15 +190,16 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->errors[]= $string;
   }
 
+  public function errors() {
+    return $this->errors;
+  }
+
   /**
    * Run
    * 
    */
   public function run() {
-    $this->out('===> Checking ', $this->file);
-    $aggregator= new SequenceAggregator(
-      TokenSequence::fromString(\io\FileUtil::getContents(new \io\File($this->file)))
-    );
+    $aggregator= new SequenceAggregator($this->tokenSequence);
     $this->sequence= $aggregator->emit();
 
     $this->readNamespaceAndImports();
