@@ -42,4 +42,18 @@ class SequenceAggregatorTest extends \unittest\TestCase {
       $agg->emit()
     );
   }
+
+  #[@test]
+  public function string_concatenation_will_be_stripped() {
+    $agg= new SequenceAggregator(TokenSequence::fromString('<?php "Hello".\\xp;'));
+
+    $expect= new TokenSequence();
+    $expect->append(new Token([T_OPEN_TAG, '<?php ', 1]));
+    $expect->append(new Token([T_CONSTANT_ENCAPSED_STRING, '"Hello"', 1]));
+    $expect->append(new Token([T_STRING, '.', 1]));
+    $expect->append(new Token([T_STRING, '\\xp', 1]));
+    $expect->append(new Token([T_STRING, ';', 1]));
+
+    $this->assertEquals($expect, $agg->emit());
+  }
 }

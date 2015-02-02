@@ -51,7 +51,7 @@ class Token extends \lang\Object {
     return
       $this->is(T_WHITESPACE) ||
       $this->is(T_DOUBLE_COLON) ||
-      ($this->is(T_STRING) && (in_array($this->literal(), [',', '(', ')', ';'])))
+      ($this->is(T_STRING) && (in_array($this->literal(), [',', '(', ')', ';', '.'])))
     ;
   }
 
