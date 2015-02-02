@@ -1,0 +1,13 @@
+{
+  "name" : "kiesel/code-tools",
+  "homepage" : "http://xp-framework.net/",
+  "license" : "BSD-3-Clause",
+  "description" : "Code linting / checking tools for XP",
+  "require" : {
+    "xp-framework/core": "dev-master",
+    "php" : ">=5.4.0"
+  },
+  "autoload" : {
+    "files" : ["src/main/php/autoload.php"]
+  }
+}
