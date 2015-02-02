@@ -179,7 +179,7 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->verifyReferences();
 
     if (sizeof($this->errors)) {
-      $this->out('---> Detected errors:', \xp::stringOf($this->errors));
+      $this->out('---> Detected errors:', implode("\n", $this->errors));
       throw new \lang\SystemExit(1, sizeof($this->errors).' errors detected.');
     }
   }
