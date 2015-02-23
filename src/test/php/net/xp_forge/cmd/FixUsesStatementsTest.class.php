@@ -69,4 +69,11 @@ class FixUsesStatementsTest extends \unittest\TestCase {
       function foo() { try { } catch (SQLException $e) { } }
     '));
   }
+
+  #[@test]
+  public function class_from_static_call() {
+    $this->assertEquals(['Object', 'Foo'], $this->scanAllOn('<?php class SomeClass extends Object {
+      function foo() { Foo::staticCall(); }
+    '));
+  }
 }

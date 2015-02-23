@@ -155,6 +155,7 @@ class FixUsesStatements extends \util\cmd\Command {
     $scanner= new TokenScanner($this->filteredIterator());
     $self= $this;
     $inUses= false;
+    $last= null;
 
     $scanner
       ->when(T_NEW, function($token, $iterator) use ($self) {
@@ -164,7 +165,9 @@ class FixUsesStatements extends \util\cmd\Command {
         $self->verifyClassRef($iterator->next());
       })
       ->when(T_IMPLEMENTS, function($token, $iterator) use ($self) {
-        while ($token->is(T_STRING) && !$token->is('{')) {
+
+        // Currently on "implements", now fetch next token
+        while ($token->is([T_IMPLEMENTS, T_STRING]) && !$token->is('{')) {
           $token= $iterator->next();
 
           if (!$token instanceof Token) {
@@ -184,6 +187,14 @@ class FixUsesStatements extends \util\cmd\Command {
         $token= $iterator->next();
 
         $self->verifyClassRef($token);
+      })
+      ->when(T_STRING, function($token, $iterator) use ($self, &$last) {
+        if ($token) {
+          $last= $token;
+        }
+      })
+      ->when(T_DOUBLE_COLON, function($token, $iterator) use ($self, &$last) {
+        $self->verifyClassRef($last);
       })
     ;
     
