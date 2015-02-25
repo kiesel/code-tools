@@ -137,6 +137,10 @@ class FixUsesStatements extends \util\cmd\Command {
   protected function verifyClassRef(Token $token) {
     $lname= $token->literal();
 
+    // Check for references to NOT check:
+    if (false !== strpos($lname, '\\')) return;
+    if (in_array($lname, ['xp', 'self', 'parent'])) return;
+
     // $this->cat->debug('Checking ref', $lname);
     if (isset($this->imports[$lname])) return;
 
@@ -167,18 +171,18 @@ class FixUsesStatements extends \util\cmd\Command {
       ->when(T_IMPLEMENTS, function($token, $iterator) use ($self) {
 
         // Currently on "implements", now fetch next token
-        while ($token->is([T_IMPLEMENTS, T_STRING]) && !$token->is('{')) {
-          $token= $iterator->next();
+        $token= $iterator->next();
 
+        while ($token->is(T_STRING) && !$token->is('{')) {
+
+          if (!$token->is(',')) {
+            $self->verifyClassRef($token);
+          }
+
+          $token= $iterator->next();
           if (!$token instanceof Token) {
             return;
           }
-
-          if ($token->is(',')) {
-            continue;
-          }
-
-          $self->verifyClassRef($token);
         }
       })
       ->when(T_CATCH, function($token, $iterator) use ($self) {

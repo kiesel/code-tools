@@ -76,4 +76,11 @@ class FixUsesStatementsTest extends \unittest\TestCase {
       function foo() { Foo::staticCall(); }
     '));
   }
+
+  #[@test]
+  public function ignored_namespaced_class() {
+    $this->assertEquals(['Object'], $this->scanAllOn('<?php class SomeClass extends Object {
+      public function foo() { new \\some\\namespaced\\ClassName(); }
+    '));
+  }
 }
