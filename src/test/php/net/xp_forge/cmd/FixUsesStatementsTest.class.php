@@ -28,8 +28,8 @@ class FixUsesStatementsTest extends \unittest\TestCase {
   private function scanAllOn($code) {
     $cut= newinstance('net.xp_forge.cmd.FixUsesStatements', [], '{
       protected $ref= [];
-      protected function verifyClassRef(\\net\\xp_forge\\token\\Token $ref) {
-        $this->ref[$ref->literal()]= true;
+      protected function lookupClassRef($lname, \\net\\xp_forge\\token\\Token $ref) {
+        $this->ref[$lname]= true;
       }
 
       public function refs() {

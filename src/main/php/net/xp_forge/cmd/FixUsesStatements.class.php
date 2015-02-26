@@ -144,6 +144,10 @@ class FixUsesStatements extends \util\cmd\Command {
     // $this->cat->debug('Checking ref', $lname);
     if (isset($this->imports[$lname])) return;
 
+    $this->lookupClassRef($lname, $token);
+  }
+
+  protected function lookupClassRef($lname, Token $token) {
     $this->cat->warn('Missing import for', $lname);
 
     if (isset($this->loadables[$lname])) {
