@@ -1,5 +1,6 @@
 <?php namespace net\xp_forge\cmd;
 
+use lang\ClassLoader;
 use util\log\Logger;
 use util\log\ConsoleAppender;
 use net\xp_forge\token\Token;
@@ -122,6 +123,10 @@ class CheckClassReferences extends \util\cmd\Command {
         // Remember for later use
         $last= $token->literal();
       })
+      ->when(T_EXTENDS, function($token, $iterator) use ($self) {
+        $class= $iterator->next()->literal();
+        $self->checkClassReference($class);
+      })
       ->run()
     ;
   }
@@ -176,14 +181,23 @@ class CheckClassReferences extends \util\cmd\Command {
     // Convert given name to XP name
     $fqcn= strtr(ltrim($fqClassName, '\\'), '\\', '.');
 
-    $cl= \lang\ClassLoader::getDefault();
-    if (!$cl->providesClass($fqcn)) {
-      if (class_exists($className)) {
-        $this->cat->warn('Unknown, but available class reference:', $className);
-      } else {
-        $this->addError('E Class '.$fqcn.' cannot be loaded.');
-      }
+    if (!$this->classAvailable($fqcn, $className)) {
+      $this->addError('E Class '.$fqcn.' cannot be loaded.');
     }
+  }
+
+  protected function classAvailable($fqcn, $className) {
+    $cl= ClassLoader::getDefault();
+    if ($cl->providesClass($fqcn)) {
+      return true;
+    }
+
+    if (class_exists($className)) {
+      $this->cat->warn('Unknown, but available class reference:', $className);
+      return true;
+    }
+
+    return false;
   }
 
   private function addError($string) {
@@ -206,7 +220,7 @@ class CheckClassReferences extends \util\cmd\Command {
     $this->verifyReferences();
 
     if (sizeof($this->errors)) {
-      $this->out('---> Detected errors:', implode("\n", $this->errors));
+      $this->cat->error('---> Detected errors:', $this->errors);
       throw new \lang\SystemExit(1, sizeof($this->errors).' errors detected.');
     }
   }
